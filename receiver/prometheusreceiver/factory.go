@@ -56,6 +56,7 @@ func createDefaultConfig() component.Config {
 		},
 	}
 }
+
 func createDefaultConfigWithRegistry(reg *prometheus.Registry) func() component.Config {
 	return func() component.Config {
 		c := createDefaultConfig().(*Config)

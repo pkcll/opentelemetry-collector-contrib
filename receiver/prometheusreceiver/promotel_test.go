@@ -1,9 +1,10 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package prometheusreceiver_test
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -11,18 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/require"
-
-	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/model/exemplar"
 	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/metadata"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
-
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/require"
 )
 
 // TestScrapeLoopScrapeAndReport exercises scrapeAndReport with various scenarios
@@ -181,7 +178,7 @@ func (a *testAppender) UpdateMetadata(ref storage.SeriesRef, l labels.Labels, m 
 	return a.next.UpdateMetadata(ref, l, m)
 }
 
-func (a *testAppender) AppendCTZeroSample(ref storage.SeriesRef, l labels.Labels, t, ct int64) (storage.SeriesRef, error) {
+func (a *testAppender) AppendCTZeroSample(ref storage.SeriesRef, l labels.Labels, _, ct int64) (storage.SeriesRef, error) {
 	return a.Append(ref, l, ct, 0.0)
 }
 
@@ -233,17 +230,17 @@ func (a *testAppender) String() string {
 // Prometheus proto exposition format bytes (known as 'encoding=delimited`)
 //
 // See also https://eli.thegreenplace.net/2011/08/02/length-prefix-framing-for-protocol-buffers
-func protoMarshalDelimited(t *testing.T, mf *dto.MetricFamily) []byte {
-	t.Helper()
+// func protoMarshalDelimited(t *testing.T, mf *dto.MetricFamily) []byte {
+// 	t.Helper()
 
-	protoBuf, err := proto.Marshal(mf)
-	require.NoError(t, err)
+// 	protoBuf, err := proto.Marshal(mf)
+// 	require.NoError(t, err)
 
-	varintBuf := make([]byte, binary.MaxVarintLen32)
-	varintLength := binary.PutUvarint(varintBuf, uint64(len(protoBuf)))
+// 	varintBuf := make([]byte, binary.MaxVarintLen32)
+// 	varintLength := binary.PutUvarint(varintBuf, uint64(len(protoBuf)))
 
-	buf := &bytes.Buffer{}
-	buf.Write(varintBuf[:varintLength])
-	buf.Write(protoBuf)
-	return buf.Bytes()
-}
+// 	buf := &bytes.Buffer{}
+// 	buf.Write(varintBuf[:varintLength])
+// 	buf.Write(protoBuf)
+// 	return buf.Bytes()
+// }

@@ -274,4 +274,5 @@ replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest 
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden => ../../pkg/golden
 
+// Contains prometheus/scrape patches for INFOPLAT-1575 
 replace github.com/prometheus/prometheus v0.54.1 => github.com/pkcll/prometheus v0.54.1-promotel-latest

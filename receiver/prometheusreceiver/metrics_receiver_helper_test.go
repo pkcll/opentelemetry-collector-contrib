@@ -24,7 +24,6 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/value"
 	dto "github.com/prometheus/prometheus/prompb/io/prometheus/client"
-	"github.com/prometheus/prometheus/scrape"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
@@ -702,9 +701,9 @@ func testComponent(t *testing.T, targets []*testData, alterConfig func(*Config),
 	// verify state after shutdown is called
 	t.Cleanup(func() {
 		// verify state after shutdown is called
-		//assert.Lenf(t, flattenTargets(receiver.scrapeManager.TargetsAll()), len(targets), "expected %v targets to be running", len(targets))
+		// assert.Lenf(t, flattenTargets(receiver.scrapeManager.TargetsAll()), len(targets), "expected %v targets to be running", len(targets))
 		require.NoError(t, receiver.Shutdown(context.Background()))
-		//assert.Empty(t, flattenTargets(receiver.scrapeManager.TargetsAll()), "expected scrape manager to have no targets")
+		// assert.Empty(t, flattenTargets(receiver.scrapeManager.TargetsAll()), "expected scrape manager to have no targets")
 	})
 
 	// waitgroup Wait() is strictly from a server POV indicating the sufficient number and type of requests have been seen
@@ -743,13 +742,13 @@ func testComponent(t *testing.T, targets []*testData, alterConfig func(*Config),
 }
 
 // flattenTargets takes a map of jobs to target and flattens to a list of targets
-func flattenTargets(targets map[string][]*scrape.Target) []*scrape.Target {
-	var flatTargets []*scrape.Target
-	for _, target := range targets {
-		flatTargets = append(flatTargets, target...)
-	}
-	return flatTargets
-}
+// func flattenTargets(targets map[string][]*scrape.Target) []*scrape.Target {
+// 	var flatTargets []*scrape.Target
+// 	for _, target := range targets {
+// 		flatTargets = append(flatTargets, target...)
+// 	}
+// 	return flatTargets
+// }
 
 func splitMetricsByTarget(metrics []pmetric.Metrics) map[string][]pmetric.ResourceMetrics {
 	pResults := make(map[string][]pmetric.ResourceMetrics)

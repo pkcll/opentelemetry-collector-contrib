@@ -49,17 +49,17 @@ func (cfg *Config) Validate() error {
 	return nil
 }
 
-func containsScrapeConfig(cfg *Config) bool {
-	if cfg.PrometheusConfig == nil {
-		return false
-	}
-	scrapeConfigs, err := (*promconfig.Config)(cfg.PrometheusConfig).GetScrapeConfigs()
-	if err != nil {
-		return false
-	}
+// func containsScrapeConfig(cfg *Config) bool {
+// 	if cfg.PrometheusConfig == nil {
+// 		return false
+// 	}
+// 	scrapeConfigs, err := (*promconfig.Config)(cfg.PrometheusConfig).GetScrapeConfigs()
+// 	if err != nil {
+// 		return false
+// 	}
 
-	return len(scrapeConfigs) > 0
-}
+// 	return len(scrapeConfigs) > 0
+// }
 
 // PromConfig is a redeclaration of promconfig.Config because we need custom unmarshaling
 // as prometheus "config" uses `yaml` tags.

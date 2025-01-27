@@ -37,16 +37,20 @@ type pReceiver struct {
 
 	settings      receiver.Settings
 	scrapeManager *scrape.Manager
-	//discoveryManager       *discovery.Manager
-	//targetAllocatorManager *targetallocator.Manager
+	// discoveryManager       *discovery.Manager
+	// targetAllocatorManager *targetallocator.Manager
 	registerer        prometheus.Registerer
 	gatherer          prometheus.Gatherer
 	unregisterMetrics func()
 	skipOffsetting    bool // for testing only
 }
 
-func NewPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *pReceiver {
-	return newPrometheusReceiver(set, cfg, next)
+type PromReceiver struct {
+	*pReceiver
+}
+
+func NewPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *PromReceiver {
+	return &PromReceiver{newPrometheusReceiver(set, cfg, next)}
 }
 
 // New creates a new prometheus.Receiver reference.
@@ -63,7 +67,7 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		gatherer = prometheus.DefaultGatherer
 	}
 
-	//baseCfg := promconfig.Config(*cfg.PrometheusConfig)
+	// baseCfg := promconfig.Config(*cfg.PrometheusConfig)
 	pr := &pReceiver{
 		cfg:          cfg,
 		consumer:     next,
@@ -86,7 +90,7 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 
 // Start is the method that starts Prometheus scraping. It
 // is controlled by having previously defined a Configuration using perhaps New.
-func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
+func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	discoveryCtx, cancel := context.WithCancel(context.Background())
 	r.cancelFunc = cancel
 
@@ -98,7 +102,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
-	//err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager)
+	// err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager)
 	// if err != nil {
 	// 	return err
 	// }
@@ -110,7 +114,11 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 	return nil
 }
 
-func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Logger, host component.Host) error {
+func (r *pReceiver) initPrometheusComponents(
+	ctx context.Context,
+	logger log.Logger,
+	_ component.Host,
+) error {
 	// Some SD mechanisms use the "refresh" package, which has its own metrics.
 	// refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
 
@@ -184,7 +192,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 	// }
 	// r.scrapeManager = scrapeManager
 
-	loop, err := scrape.NewGathererLoop(ctx, nil, store, r.registerer, r.gatherer, 10*time.Millisecond)
+	loop, err := scrape.NewGathererLoop(ctx, logger, store, r.registerer, r.gatherer, 10*time.Millisecond)
 	if err != nil {
 		return err
 	}

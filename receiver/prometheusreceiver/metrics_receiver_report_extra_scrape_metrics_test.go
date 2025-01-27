@@ -62,9 +62,9 @@ func testScraperMetrics(t *testing.T, targets []*testData, reportExtraScrapeMetr
 	// verify state after shutdown is called
 	t.Cleanup(func() {
 		// verify state after shutdown is called
-		//assert.Lenf(t, flattenTargets(receiver.scrapeManager.TargetsAll()), len(targets), "expected %v targets to be running", len(targets))
+		// assert.Lenf(t, flattenTargets(receiver.scrapeManager.TargetsAll()), len(targets), "expected %v targets to be running", len(targets))
 		require.NoError(t, receiver.Shutdown(context.Background()))
-		//assert.Empty(t, flattenTargets(receiver.scrapeManager.TargetsAll()), "expected scrape manager to have no targets")
+		// assert.Empty(t, flattenTargets(receiver.scrapeManager.TargetsAll()), "expected scrape manager to have no targets")
 	})
 
 	// waitgroup Wait() is strictly from a server POV indicating the sufficient number and type of requests have been seen

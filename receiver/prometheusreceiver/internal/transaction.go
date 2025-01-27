@@ -59,6 +59,10 @@ type scopeID struct {
 	version string
 }
 
+type Transaction struct {
+	*transaction
+}
+
 func NewTransaction(
 	ctx context.Context,
 	metricAdjuster MetricsAdjuster,
@@ -68,8 +72,8 @@ func NewTransaction(
 	obsrecv *receiverhelper.ObsReport,
 	trimSuffixes bool,
 	enableNativeHistograms bool,
-) *transaction {
-	return newTransaction(
+) *Transaction {
+	return &Transaction{newTransaction(
 		ctx,
 		metricAdjuster,
 		sink,
@@ -78,7 +82,7 @@ func NewTransaction(
 		obsrecv,
 		trimSuffixes,
 		enableNativeHistograms,
-	)
+	)}
 }
 
 func newTransaction(

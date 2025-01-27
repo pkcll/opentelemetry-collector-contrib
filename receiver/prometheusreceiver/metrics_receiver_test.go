@@ -1643,8 +1643,8 @@ scrape_configs:
 }
 
 func TestReceiverEndToEnd(t *testing.T) {
-	//cfg, err := setupTestConfig("127.0.0.1:8888", "/metrics")
-	//assert.NoError(t, err)
+	// cfg, err := setupTestConfig("127.0.0.1:8888", "/metrics")
+	// assert.NoError(t, err)
 	ctx := context.Background()
 	config := &Config{
 		PrometheusConfig:     (*PromConfig)(&promcfg.Config{}),
@@ -1666,11 +1666,7 @@ func TestReceiverEndToEnd(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		// This is the receiver's pov as to what should have been collected from the server
 		metrics := cms.AllMetrics()
-		if len(metrics) > 0 {
-			// If we don't have enough scrapes yet lets return false and wait for another tick
-			return true
-		}
-		return false
+		return len(metrics) > 0
 	}, 30*time.Second, 500*time.Millisecond)
 
 	// This begins the processing of the scrapes collected by the receiver
