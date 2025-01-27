@@ -59,6 +59,28 @@ type scopeID struct {
 	version string
 }
 
+func NewTransaction(
+	ctx context.Context,
+	metricAdjuster MetricsAdjuster,
+	sink consumer.Metrics,
+	externalLabels labels.Labels,
+	settings receiver.Settings,
+	obsrecv *receiverhelper.ObsReport,
+	trimSuffixes bool,
+	enableNativeHistograms bool,
+) *transaction {
+	return newTransaction(
+		ctx,
+		metricAdjuster,
+		sink,
+		externalLabels,
+		settings,
+		obsrecv,
+		trimSuffixes,
+		enableNativeHistograms,
+	)
+}
+
 func newTransaction(
 	ctx context.Context,
 	metricAdjuster MetricsAdjuster,
@@ -311,6 +333,7 @@ func (t *transaction) getSeriesRef(ls labels.Labels, mtype pmetric.MetricType) u
 
 // getMetrics returns all metrics to the given slice.
 // The only error returned by this function is errNoDataToBuild.
+// TODO: USE THIS TO CONVERT PROM TO OTEL
 func (t *transaction) getMetrics() (pmetric.Metrics, error) {
 	if len(t.families) == 0 {
 		return pmetric.Metrics{}, errNoDataToBuild

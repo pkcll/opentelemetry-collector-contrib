@@ -4,12 +4,12 @@
 package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
@@ -35,14 +35,17 @@ type Config struct {
 	// ReportExtraScrapeMetrics - enables reporting of additional metrics for Prometheus client like scrape_body_size_bytes
 	ReportExtraScrapeMetrics bool `mapstructure:"report_extra_scrape_metrics"`
 
+	// todo: make it optional
 	TargetAllocator *targetallocator.Config `mapstructure:"target_allocator"`
+
+	Registry *prometheus.Registry `mapstructure:"-"`
 }
 
 // Validate checks the receiver configuration is valid.
 func (cfg *Config) Validate() error {
-	if !containsScrapeConfig(cfg) && cfg.TargetAllocator == nil {
-		return errors.New("no Prometheus scrape_configs or target_allocator set")
-	}
+	// if !containsScrapeConfig(cfg) && cfg.TargetAllocator == nil {
+	// 	return errors.New("no Prometheus scrape_configs or target_allocator set")
+	// }
 	return nil
 }
 

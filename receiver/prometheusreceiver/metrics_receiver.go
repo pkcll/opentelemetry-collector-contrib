@@ -5,8 +5,6 @@ package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-co
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"reflect"
 	"regexp"
 	"sync"
@@ -15,18 +13,13 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
-	commonconfig "github.com/prometheus/common/config"
-	promconfig "github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/component/componentstatus"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
 )
 
 const (
@@ -42,18 +35,35 @@ type pReceiver struct {
 	configLoaded   chan struct{}
 	loadConfigOnce sync.Once
 
-	settings               receiver.Settings
-	scrapeManager          *scrape.Manager
-	discoveryManager       *discovery.Manager
-	targetAllocatorManager *targetallocator.Manager
-	registerer             prometheus.Registerer
-	unregisterMetrics      func()
-	skipOffsetting         bool // for testing only
+	settings      receiver.Settings
+	scrapeManager *scrape.Manager
+	//discoveryManager       *discovery.Manager
+	//targetAllocatorManager *targetallocator.Manager
+	registerer        prometheus.Registerer
+	gatherer          prometheus.Gatherer
+	unregisterMetrics func()
+	skipOffsetting    bool // for testing only
+}
+
+func NewPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *pReceiver {
+	return newPrometheusReceiver(set, cfg, next)
 }
 
 // New creates a new prometheus.Receiver reference.
 func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *pReceiver {
-	baseCfg := promconfig.Config(*cfg.PrometheusConfig)
+	var (
+		registerer prometheus.Registerer
+		gatherer   prometheus.Gatherer
+	)
+	if cfg.Registry != nil {
+		registerer = cfg.Registry
+		gatherer = cfg.Registry
+	} else {
+		registerer = prometheus.DefaultRegisterer
+		gatherer = prometheus.DefaultGatherer
+	}
+
+	//baseCfg := promconfig.Config(*cfg.PrometheusConfig)
 	pr := &pReceiver{
 		cfg:          cfg,
 		consumer:     next,
@@ -61,13 +71,15 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		configLoaded: make(chan struct{}),
 		registerer: prometheus.WrapRegistererWith(
 			prometheus.Labels{"receiver": set.ID.String()},
-			prometheus.DefaultRegisterer),
-		targetAllocatorManager: targetallocator.NewManager(
-			set,
-			cfg.TargetAllocator,
-			&baseCfg,
-			enableNativeHistogramsGate.IsEnabled(),
-		),
+			registerer),
+		// Added
+		gatherer: gatherer,
+		// targetAllocatorManager: targetallocator.NewManager(
+		// 	set,
+		// 	cfg.TargetAllocator,
+		// 	&baseCfg,
+		// 	enableNativeHistogramsGate.IsEnabled(),
+		// ),
 	}
 	return pr
 }
@@ -86,10 +98,10 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
-	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager)
-	if err != nil {
-		return err
-	}
+	//err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager)
+	// if err != nil {
+	// 	return err
+	// }
 
 	r.loadConfigOnce.Do(func() {
 		close(r.configLoaded)
@@ -100,29 +112,30 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 
 func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Logger, host component.Host) error {
 	// Some SD mechanisms use the "refresh" package, which has its own metrics.
-	refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
+	// refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
 
 	// Register the metrics specific for each SD mechanism, and the ones for the refresh package.
-	sdMetrics, err := discovery.RegisterSDMetrics(r.registerer, refreshSdMetrics)
-	if err != nil {
-		return fmt.Errorf("failed to register service discovery metrics: %w", err)
-	}
-	r.discoveryManager = discovery.NewManager(ctx, logger, r.registerer, sdMetrics)
-	if r.discoveryManager == nil {
-		// NewManager can sometimes return nil if it encountered an error, but
-		// the error message is logged separately.
-		return errors.New("failed to create discovery manager")
-	}
+	// sdMetrics, err := discovery.RegisterSDMetrics(r.registerer, refreshSdMetrics)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to register service discovery metrics: %w", err)
+	// }
+	// r.discoveryManager = discovery.NewManager(ctx, logger, r.registerer, sdMetrics)
+	// if r.discoveryManager == nil {
+	// 	// NewManager can sometimes return nil if it encountered an error, but
+	// 	// the error message is logged separately.
+	// 	return errors.New("failed to create discovery manager")
+	// }
 
-	go func() {
-		r.settings.Logger.Info("Starting discovery manager")
-		if err = r.discoveryManager.Run(); err != nil && !errors.Is(err, context.Canceled) {
-			r.settings.Logger.Error("Discovery manager failed", zap.Error(err))
-			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
-		}
-	}()
+	// go func() {
+	// 	r.settings.Logger.Info("Starting discovery manager")
+	// 	if err = r.discoveryManager.Run(); err != nil && !errors.Is(err, context.Canceled) {
+	// 		r.settings.Logger.Error("Discovery manager failed", zap.Error(err))
+	// 		componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
+	// 	}
+	// }()
 
 	var startTimeMetricRegex *regexp.Regexp
+	var err error
 	if r.cfg.StartTimeMetricRegex != "" {
 		startTimeMetricRegex, err = regexp.Compile(r.cfg.StartTimeMetricRegex)
 		if err != nil {
@@ -146,11 +159,10 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 	}
 
 	opts := &scrape.Options{
-		PassMetadataInContext: true,
-		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
-		HTTPClientOptions: []commonconfig.HTTPClientOption{
-			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
-		},
+		ExtraMetrics: r.cfg.ReportExtraScrapeMetrics,
+		// HTTPClientOptions: []commonconfig.HTTPClientOption{
+		// 	commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
+		// },
 	}
 
 	if enableNativeHistogramsGate.IsEnabled() {
@@ -166,29 +178,26 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 			Set(reflect.ValueOf(true))
 	}
 
-	scrapeManager, err := scrape.NewManager(opts, logger, store, r.registerer)
+	// scrapeManager, err := scrape.NewManager(opts, logger, store, r.registerer)
+	// if err != nil {
+	// 	return err
+	// }
+	// r.scrapeManager = scrapeManager
+
+	loop, err := scrape.NewGathererLoop(ctx, nil, store, r.registerer, r.gatherer, 10*time.Millisecond)
 	if err != nil {
 		return err
-	}
-	r.scrapeManager = scrapeManager
-
-	r.unregisterMetrics = func() {
-		refreshSdMetrics.Unregister()
-		for _, sdMetric := range sdMetrics {
-			sdMetric.Unregister()
-		}
-		r.discoveryManager.UnregisterMetrics()
-		r.scrapeManager.UnregisterMetrics()
 	}
 
 	go func() {
 		// The scrape manager needs to wait for the configuration to be loaded before beginning
 		<-r.configLoaded
-		r.settings.Logger.Info("Starting scrape manager")
-		if err := r.scrapeManager.Run(r.discoveryManager.SyncCh()); err != nil {
-			r.settings.Logger.Error("Scrape manager failed", zap.Error(err))
-			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
-		}
+		r.settings.Logger.Info("Starting gatherer loop")
+		// if err := r.scrapeManager.Run(r.discoveryManager.SyncCh()); err != nil {
+		// 	r.settings.Logger.Error("Scrape manager failed", zap.Error(err))
+		// 	componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
+		// }
+		loop.Run(nil)
 	}()
 	return nil
 }
@@ -217,9 +226,9 @@ func (r *pReceiver) Shutdown(context.Context) error {
 	if r.scrapeManager != nil {
 		r.scrapeManager.Stop()
 	}
-	if r.targetAllocatorManager != nil {
-		r.targetAllocatorManager.Shutdown()
-	}
+	// if r.targetAllocatorManager != nil {
+	// 	r.targetAllocatorManager.Shutdown()
+	// }
 	if r.unregisterMetrics != nil {
 		r.unregisterMetrics()
 	}

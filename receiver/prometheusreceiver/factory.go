@@ -6,6 +6,7 @@ package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-co
 import (
 	"context"
 
+	"github.com/prometheus/client_golang/prometheus"
 	promconfig "github.com/prometheus/prometheus/config"
 	_ "github.com/prometheus/prometheus/discovery/install" // init() of this package registers service discovery impl.
 	"go.opentelemetry.io/collector/component"
@@ -41,11 +42,25 @@ func NewFactory() receiver.Factory {
 		receiver.WithMetrics(createMetricsReceiver, metadata.MetricsStability))
 }
 
+func NewFactoryWithRegistry(reg *prometheus.Registry) receiver.Factory {
+	return receiver.NewFactory(
+		metadata.Type,
+		createDefaultConfigWithRegistry(reg),
+		receiver.WithMetrics(createMetricsReceiver, metadata.MetricsStability))
+}
+
 func createDefaultConfig() component.Config {
 	return &Config{
 		PrometheusConfig: &PromConfig{
 			GlobalConfig: promconfig.DefaultGlobalConfig,
 		},
+	}
+}
+func createDefaultConfigWithRegistry(reg *prometheus.Registry) func() component.Config {
+	return func() component.Config {
+		c := createDefaultConfig().(*Config)
+		c.Registry = reg
+		return c
 	}
 }
 
