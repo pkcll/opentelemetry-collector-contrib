@@ -809,7 +809,7 @@ func verifyMultipleScopes(t *testing.T, td *testData, rms []pmetric.ResourceMetr
 	require.Equal(t, "fake.scope.name", sms.At(0).Scope().Name())
 	require.Equal(t, "v0.1.0", sms.At(0).Scope().Version())
 	require.Equal(t, 0, sms.At(0).Scope().Attributes().Len())
-	require.Equal(t, "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver", sms.At(1).Scope().Name())
+	require.Equal(t, "github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver", sms.At(1).Scope().Name())
 	require.Equal(t, 0, sms.At(1).Scope().Attributes().Len())
 	require.Equal(t, "scope.with.attributes", sms.At(2).Scope().Name())
 	require.Equal(t, "v1.5.0", sms.At(2).Scope().Version())

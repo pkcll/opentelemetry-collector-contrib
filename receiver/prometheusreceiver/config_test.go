@@ -20,7 +20,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
+	"github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
 )
 
 func TestLoadConfig(t *testing.T) {

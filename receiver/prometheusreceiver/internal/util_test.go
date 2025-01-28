@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package internal // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
+package internal // import "github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 
 import (
 	"testing"
@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
@@ -180,5 +181,15 @@ func TestGetBoundary(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantValue, value)
 		})
+	}
+}
+
+// Force the state of feature gate for a test
+// usage: defer SetFeatureGateForTest("gateName", true)()
+func SetFeatureGateForTest(t testing.TB, gate *featuregate.Gate, enabled bool) func() {
+	originalValue := gate.IsEnabled()
+	require.NoError(t, featuregate.GlobalRegistry().Set(gate.ID(), enabled))
+	return func() {
+		require.NoError(t, featuregate.GlobalRegistry().Set(gate.ID(), originalValue))
 	}
 }

@@ -4,4 +4,4 @@
 //go:generate mdatagen metadata.yaml
 
 // Package prometheusreceiver autodiscovers and scrapes Prometheus metrics handlers, often served at /metrics.
-package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+package prometheusreceiver // import "github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver"

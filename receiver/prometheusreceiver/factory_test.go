@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
+	"github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
 )
 
 func TestCreateDefaultConfig(t *testing.T) {
