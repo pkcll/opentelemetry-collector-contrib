@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkcll/prometheus/scrape"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/scrape"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/featuregate"

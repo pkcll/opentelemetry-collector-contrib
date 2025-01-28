@@ -12,8 +12,8 @@ import (
 	"unsafe"
 
 	"github.com/go-kit/log"
+	"github.com/pkcll/prometheus/scrape"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/prometheus/scrape"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"

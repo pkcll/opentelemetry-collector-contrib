@@ -9,11 +9,10 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.115.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.115.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.115.0
+	github.com/pkcll/prometheus v0.54.1-promotel-v1.0.0 // Contains prometheus/scrape patches for INFOPLAT-1575
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.1
-	github.com/prometheus/prometheus v0.54.1
 	github.com/stretchr/testify v1.10.0
-	github.com/test-go/testify v1.1.4
 	go.opentelemetry.io/collector/component v0.115.0
 	go.opentelemetry.io/collector/component/componenttest v0.115.0
 	go.opentelemetry.io/collector/config/confighttp v0.115.0
@@ -38,6 +37,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/prometheus/prometheus v0.54.1
+
 require (
 	cloud.google.com/go/auth v0.7.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
@@ -47,7 +48,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5 v5.7.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v4 v4.3.0 // indirect
-	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
 	github.com/Code-Hex/go-generics-cache v1.5.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
@@ -274,5 +274,4 @@ replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest 
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden => ../../pkg/golden
 
-// Contains prometheus/scrape patches for INFOPLAT-1575
-replace github.com/prometheus/prometheus v0.54.1 => github.com/pkcll/prometheus v0.54.1-promotel-latest
+// replace github.com/prometheus/prometheus v0.54.1 => github.com/pkcll/prometheus v0.54.1-promotel-latest
