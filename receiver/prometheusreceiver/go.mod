@@ -9,9 +9,10 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.115.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.115.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.115.0
-	github.com/pkcll/prometheus v0.54.1-promotel-v1.0.0 // Contains prometheus/scrape patches for INFOPLAT-1575
+	github.com/pkcll/prometheus v0.54.2 // Contains prometheus/scrape patches for INFOPLAT-1575
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.1
+	github.com/prometheus/prometheus v0.54.1
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/collector/component v0.115.0
 	go.opentelemetry.io/collector/component/componenttest v0.115.0
@@ -36,8 +37,6 @@ require (
 	google.golang.org/protobuf v1.35.2
 	gopkg.in/yaml.v2 v2.4.0
 )
-
-require github.com/prometheus/prometheus v0.54.1
 
 require (
 	cloud.google.com/go/auth v0.7.0 // indirect
@@ -273,5 +272,3 @@ retract (
 replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest => ../../pkg/pdatatest
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden => ../../pkg/golden
-
-// replace github.com/prometheus/prometheus v0.54.1 => github.com/pkcll/prometheus v0.54.1-promotel-latest
