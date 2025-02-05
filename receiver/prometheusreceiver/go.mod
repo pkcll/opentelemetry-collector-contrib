@@ -9,7 +9,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.115.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.115.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.115.0
-	github.com/pkcll/prometheus v0.54.2 // Contains prometheus/scrape patches for INFOPLAT-1575
+	github.com/pkcll/prometheus v0.54.3-0.20250205152829-6e977873d1b5 // Contains prometheus/scrape patches for INFOPLAT-1575
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.1
 	github.com/prometheus/prometheus v0.54.1
