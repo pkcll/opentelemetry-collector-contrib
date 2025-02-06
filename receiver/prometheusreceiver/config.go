@@ -37,7 +37,8 @@ type Config struct {
 
 	TargetAllocator *targetallocator.Config `mapstructure:"target_allocator"`
 
-	Registry *prometheus.Registry `mapstructure:"-"`
+	Registerer prometheus.Registerer `mapstructure:"-"`
+	Gatherer   prometheus.Gatherer   `mapstructure:"-"`
 }
 
 // Validate checks the receiver configuration is valid.

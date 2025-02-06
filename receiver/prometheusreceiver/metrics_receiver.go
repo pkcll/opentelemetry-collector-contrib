@@ -51,18 +51,15 @@ func NewPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 // New creates a new prometheus.Receiver reference.
 func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *pReceiver {
 	var (
-		registerer prometheus.Registerer
-		gatherer   prometheus.Gatherer
+		r prometheus.Registerer = prometheus.DefaultRegisterer
+		g prometheus.Gatherer   = prometheus.DefaultGatherer
 	)
-	if cfg.Registry != nil {
-		registerer = cfg.Registry
-		gatherer = cfg.Registry
-	} else {
-		registerer = prometheus.DefaultRegisterer
-		gatherer = prometheus.DefaultGatherer
+	if cfg.Registerer != nil {
+		r = cfg.Registerer
 	}
-
-	// baseCfg := promconfig.Config(*cfg.PrometheusConfig)
+	if cfg.Gatherer != nil {
+		g = cfg.Gatherer
+	}
 	pr := &pReceiver{
 		cfg:          cfg,
 		consumer:     next,
@@ -70,9 +67,8 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		configLoaded: make(chan struct{}),
 		registerer: prometheus.WrapRegistererWith(
 			prometheus.Labels{"receiver": set.ID.String()},
-			registerer),
-		// Added
-		gatherer: gatherer,
+			r),
+		gatherer: g,
 	}
 	return pr
 }

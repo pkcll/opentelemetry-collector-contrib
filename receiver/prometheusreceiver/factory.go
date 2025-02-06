@@ -34,6 +34,20 @@ var enableNativeHistogramsGate = featuregate.GlobalRegistry().MustRegister(
 		" those Prometheus classic histograms that have a native histogram alternative"),
 )
 
+type FactoryOption func(*Config)
+
+func WithGatherer(g prometheus.Gatherer) FactoryOption {
+	return func(cfg *Config) {
+		cfg.Gatherer = g
+	}
+}
+
+func WithRegisterer(r prometheus.Registerer) FactoryOption {
+	return func(cfg *Config) {
+		cfg.Registerer = r
+	}
+}
+
 // NewFactory creates a new Prometheus receiver factory.
 func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
@@ -42,10 +56,16 @@ func NewFactory() receiver.Factory {
 		receiver.WithMetrics(createMetricsReceiver, metadata.MetricsStability))
 }
 
-func NewFactoryWithRegistry(reg *prometheus.Registry) receiver.Factory {
+func NewFactoryWithOptions(opts ...FactoryOption) receiver.Factory {
 	return receiver.NewFactory(
 		metadata.Type,
-		createDefaultConfigWithRegistry(reg),
+		func() component.Config {
+			c := createDefaultConfig().(*Config)
+			for _, opt := range opts {
+				opt(c)
+			}
+			return c
+		},
 		receiver.WithMetrics(createMetricsReceiver, metadata.MetricsStability))
 }
 
@@ -54,14 +74,6 @@ func createDefaultConfig() component.Config {
 		PrometheusConfig: &PromConfig{
 			GlobalConfig: promconfig.DefaultGlobalConfig,
 		},
-	}
-}
-
-func createDefaultConfigWithRegistry(reg *prometheus.Registry) func() component.Config {
-	return func() component.Config {
-		c := createDefaultConfig().(*Config)
-		c.Registry = reg
-		return c
 	}
 }
 
