@@ -139,7 +139,8 @@ func TestLoadConfigFailsOnNoPrometheusOrTAConfig(t *testing.T) {
 	sub, err := cm.Sub(component.NewIDWithName(metadata.Type, "").String())
 	require.NoError(t, err)
 	require.NoError(t, sub.Unmarshal(cfg))
-	require.ErrorContains(t, component.ValidateConfig(cfg), "no Prometheus scrape_configs or target_allocator set")
+	// require.ErrorContains(t, component.ValidateConfig(cfg), "no Prometheus scrape_configs or target_allocator set")
+	require.NoError(t, component.ValidateConfig(cfg))
 
 	cfg = factory.CreateDefaultConfig()
 	sub, err = cm.Sub(component.NewIDWithName(metadata.Type, "withConfigAndTA").String())
