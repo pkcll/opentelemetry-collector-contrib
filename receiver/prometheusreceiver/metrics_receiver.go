@@ -131,7 +131,9 @@ func (r *pReceiver) initPrometheusComponents(
 	if err != nil {
 		return err
 	}
-
+	r.unregisterMetrics = func() {
+		loop.UnregisterMetrics()
+	}
 	go func() {
 		// The scrape manager needs to wait for the configuration to be loaded before beginning
 		<-r.configLoaded
