@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
@@ -37,8 +38,9 @@ type Config struct {
 
 	TargetAllocator *targetallocator.Config `mapstructure:"target_allocator"`
 
-	Registerer prometheus.Registerer `mapstructure:"-"`
-	Gatherer   prometheus.Gatherer   `mapstructure:"-"`
+	Registerer       prometheus.Registerer `mapstructure:"-"`
+	Gatherer         prometheus.Gatherer   `mapstructure:"-"`
+	GathererInterval time.Duration         `mapstructure:"-"`
 }
 
 // Validate checks the receiver configuration is valid.

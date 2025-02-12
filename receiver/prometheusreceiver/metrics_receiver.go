@@ -33,11 +33,12 @@ type pReceiver struct {
 	configLoaded   chan struct{}
 	loadConfigOnce sync.Once
 
-	settings          receiver.Settings
-	registerer        prometheus.Registerer
-	gatherer          prometheus.Gatherer
-	unregisterMetrics func()
-	skipOffsetting    bool // for testing only
+	settings             receiver.Settings
+	registerer           prometheus.Registerer
+	gatherer             prometheus.Gatherer
+	unregisterMetrics    func()
+	skipOffsetting       bool // for testing only
+	gathererLoopInterval time.Duration
 }
 
 type PromReceiver struct {
@@ -123,7 +124,7 @@ func (r *pReceiver) initPrometheusComponents(
 		return err
 	}
 
-	loop, err := scrape.NewGathererLoop(ctx, logger, store, r.registerer, r.gatherer, 10*time.Millisecond)
+	loop, err := scrape.NewGathererLoop(ctx, logger, store, r.registerer, r.gatherer, r.cfg.GathererInterval)
 	if err != nil {
 		return err
 	}

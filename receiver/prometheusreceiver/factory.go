@@ -5,6 +5,7 @@ package prometheusreceiver // import "github.com/pkcll/opentelemetry-collector-c
 
 import (
 	"context"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	promconfig "github.com/prometheus/prometheus/config"
@@ -48,6 +49,12 @@ func WithRegisterer(r prometheus.Registerer) FactoryOption {
 	}
 }
 
+func WithGathererInterval(interval time.Duration) FactoryOption {
+	return func(cfg *Config) {
+		cfg.GathererInterval = interval
+	}
+}
+
 // NewFactory creates a new Prometheus receiver factory.
 func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
@@ -74,6 +81,7 @@ func createDefaultConfig() component.Config {
 		PrometheusConfig: &PromConfig{
 			GlobalConfig: promconfig.DefaultGlobalConfig,
 		},
+		GathererInterval: time.Duration(promconfig.DefaultGlobalConfig.ScrapeInterval),
 	}
 }
 

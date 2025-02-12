@@ -15,7 +15,6 @@ import (
 	gokitlog "github.com/go-kit/log"
 	"github.com/prometheus/common/model"
 	promConfig "github.com/prometheus/prometheus/config"
-	promcfg "github.com/prometheus/prometheus/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
@@ -1646,13 +1645,12 @@ func TestReceiverEndToEnd(t *testing.T) {
 	// cfg, err := setupTestConfig("127.0.0.1:8888", "/metrics")
 	// assert.NoError(t, err)
 	ctx := context.Background()
-	config := &Config{
-		PrometheusConfig:     (*PromConfig)(&promcfg.Config{}),
-		StartTimeMetricRegex: "",
-	}
+	factory := NewFactory()
+	cfg := factory.CreateDefaultConfig().(*Config)
+	cfg.GathererInterval = 10 * time.Millisecond
 
 	cms := new(consumertest.MetricsSink)
-	receiver := newPrometheusReceiver(receivertest.NewNopSettings(), config, cms)
+	receiver := newPrometheusReceiver(receivertest.NewNopSettings(), cfg, cms)
 	receiver.skipOffsetting = true
 
 	require.NoError(t, receiver.Start(ctx, componenttest.NewNopHost()))
