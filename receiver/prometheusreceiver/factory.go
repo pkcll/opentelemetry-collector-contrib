@@ -39,18 +39,27 @@ type FactoryOption func(*Config)
 
 func WithGatherer(g prometheus.Gatherer) FactoryOption {
 	return func(cfg *Config) {
+		if g == nil {
+			return
+		}
 		cfg.Gatherer = g
 	}
 }
 
 func WithRegisterer(r prometheus.Registerer) FactoryOption {
 	return func(cfg *Config) {
+		if r == nil {
+			return
+		}
 		cfg.Registerer = r
 	}
 }
 
 func WithGathererInterval(interval time.Duration) FactoryOption {
 	return func(cfg *Config) {
+		if interval == 0 {
+			return
+		}
 		cfg.GathererInterval = interval
 	}
 }
@@ -81,6 +90,8 @@ func createDefaultConfig() component.Config {
 		PrometheusConfig: &PromConfig{
 			GlobalConfig: promconfig.DefaultGlobalConfig,
 		},
+		Registerer:       prometheus.DefaultRegisterer,
+		Gatherer:         prometheus.DefaultGatherer,
 		GathererInterval: time.Duration(promconfig.DefaultGlobalConfig.ScrapeInterval),
 	}
 }
