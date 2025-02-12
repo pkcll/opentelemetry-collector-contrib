@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package internal // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
+package internal // import "github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 
 import (
 	"context"
@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/pkcll/prometheus/scrape"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/exemplar"
 	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/metadata"
 	"github.com/prometheus/prometheus/model/value"
-	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -26,7 +26,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus"
-	mdata "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
+
+	mdata "github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
 )
 
 type resourceKey struct {
@@ -57,6 +58,32 @@ var emptyScopeID scopeID
 type scopeID struct {
 	name    string
 	version string
+}
+
+type Transaction struct {
+	*transaction
+}
+
+func NewTransaction(
+	ctx context.Context,
+	metricAdjuster MetricsAdjuster,
+	sink consumer.Metrics,
+	externalLabels labels.Labels,
+	settings receiver.Settings,
+	obsrecv *receiverhelper.ObsReport,
+	trimSuffixes bool,
+	enableNativeHistograms bool,
+) *Transaction {
+	return &Transaction{newTransaction(
+		ctx,
+		metricAdjuster,
+		sink,
+		externalLabels,
+		settings,
+		obsrecv,
+		trimSuffixes,
+		enableNativeHistograms,
+	)}
 }
 
 func newTransaction(
@@ -311,6 +338,7 @@ func (t *transaction) getSeriesRef(ls labels.Labels, mtype pmetric.MetricType) u
 
 // getMetrics returns all metrics to the given slice.
 // The only error returned by this function is errNoDataToBuild.
+// TODO: USE THIS TO CONVERT PROM TO OTEL
 func (t *transaction) getMetrics() (pmetric.Metrics, error) {
 	if len(t.families) == 0 {
 		return pmetric.Metrics{}, errNoDataToBuild

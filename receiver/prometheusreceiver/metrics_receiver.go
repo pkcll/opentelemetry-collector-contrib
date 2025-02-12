@@ -1,32 +1,23 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+package prometheusreceiver // import "github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"reflect"
 	"regexp"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/go-kit/log"
+	"github.com/pkcll/prometheus/scrape"
 	"github.com/prometheus/client_golang/prometheus"
-	commonconfig "github.com/prometheus/common/config"
-	promconfig "github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/discovery"
-	"github.com/prometheus/prometheus/scrape"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/component/componentstatus"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
+	"github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 )
 
 const (
@@ -42,18 +33,34 @@ type pReceiver struct {
 	configLoaded   chan struct{}
 	loadConfigOnce sync.Once
 
-	settings               receiver.Settings
-	scrapeManager          *scrape.Manager
-	discoveryManager       *discovery.Manager
-	targetAllocatorManager *targetallocator.Manager
-	registerer             prometheus.Registerer
-	unregisterMetrics      func()
-	skipOffsetting         bool // for testing only
+	settings             receiver.Settings
+	registerer           prometheus.Registerer
+	gatherer             prometheus.Gatherer
+	unregisterMetrics    func()
+	skipOffsetting       bool // for testing only
+	gathererLoopInterval time.Duration
+}
+
+type PromReceiver struct {
+	*pReceiver
+}
+
+func NewPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *PromReceiver {
+	return &PromReceiver{newPrometheusReceiver(set, cfg, next)}
 }
 
 // New creates a new prometheus.Receiver reference.
 func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *pReceiver {
-	baseCfg := promconfig.Config(*cfg.PrometheusConfig)
+	var (
+		r prometheus.Registerer = prometheus.DefaultRegisterer
+		g prometheus.Gatherer   = prometheus.DefaultGatherer
+	)
+	if cfg.Registerer != nil {
+		r = cfg.Registerer
+	}
+	if cfg.Gatherer != nil {
+		g = cfg.Gatherer
+	}
 	pr := &pReceiver{
 		cfg:          cfg,
 		consumer:     next,
@@ -61,20 +68,15 @@ func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Met
 		configLoaded: make(chan struct{}),
 		registerer: prometheus.WrapRegistererWith(
 			prometheus.Labels{"receiver": set.ID.String()},
-			prometheus.DefaultRegisterer),
-		targetAllocatorManager: targetallocator.NewManager(
-			set,
-			cfg.TargetAllocator,
-			&baseCfg,
-			enableNativeHistogramsGate.IsEnabled(),
-		),
+			r),
+		gatherer: g,
 	}
 	return pr
 }
 
 // Start is the method that starts Prometheus scraping. It
 // is controlled by having previously defined a Configuration using perhaps New.
-func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
+func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	discoveryCtx, cancel := context.WithCancel(context.Background())
 	r.cancelFunc = cancel
 
@@ -86,11 +88,6 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
-	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager)
-	if err != nil {
-		return err
-	}
-
 	r.loadConfigOnce.Do(func() {
 		close(r.configLoaded)
 	})
@@ -98,31 +95,13 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 	return nil
 }
 
-func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Logger, host component.Host) error {
-	// Some SD mechanisms use the "refresh" package, which has its own metrics.
-	refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
-
-	// Register the metrics specific for each SD mechanism, and the ones for the refresh package.
-	sdMetrics, err := discovery.RegisterSDMetrics(r.registerer, refreshSdMetrics)
-	if err != nil {
-		return fmt.Errorf("failed to register service discovery metrics: %w", err)
-	}
-	r.discoveryManager = discovery.NewManager(ctx, logger, r.registerer, sdMetrics)
-	if r.discoveryManager == nil {
-		// NewManager can sometimes return nil if it encountered an error, but
-		// the error message is logged separately.
-		return errors.New("failed to create discovery manager")
-	}
-
-	go func() {
-		r.settings.Logger.Info("Starting discovery manager")
-		if err = r.discoveryManager.Run(); err != nil && !errors.Is(err, context.Canceled) {
-			r.settings.Logger.Error("Discovery manager failed", zap.Error(err))
-			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
-		}
-	}()
-
+func (r *pReceiver) initPrometheusComponents(
+	ctx context.Context,
+	logger log.Logger,
+	_ component.Host,
+) error {
 	var startTimeMetricRegex *regexp.Regexp
+	var err error
 	if r.cfg.StartTimeMetricRegex != "" {
 		startTimeMetricRegex, err = regexp.Compile(r.cfg.StartTimeMetricRegex)
 		if err != nil {
@@ -145,50 +124,18 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 		return err
 	}
 
-	opts := &scrape.Options{
-		PassMetadataInContext: true,
-		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
-		HTTPClientOptions: []commonconfig.HTTPClientOption{
-			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
-		},
-	}
-
-	if enableNativeHistogramsGate.IsEnabled() {
-		opts.EnableNativeHistogramsIngestion = true
-	}
-
-	// for testing only
-	if r.skipOffsetting {
-		optsValue := reflect.ValueOf(opts).Elem()
-		field := optsValue.FieldByName("skipOffsetting")
-		reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).
-			Elem().
-			Set(reflect.ValueOf(true))
-	}
-
-	scrapeManager, err := scrape.NewManager(opts, logger, store, r.registerer)
+	loop, err := scrape.NewGathererLoop(ctx, logger, store, r.registerer, r.gatherer, r.cfg.GathererInterval)
 	if err != nil {
 		return err
 	}
-	r.scrapeManager = scrapeManager
-
 	r.unregisterMetrics = func() {
-		refreshSdMetrics.Unregister()
-		for _, sdMetric := range sdMetrics {
-			sdMetric.Unregister()
-		}
-		r.discoveryManager.UnregisterMetrics()
-		r.scrapeManager.UnregisterMetrics()
+		loop.UnregisterMetrics()
 	}
-
 	go func() {
 		// The scrape manager needs to wait for the configuration to be loaded before beginning
 		<-r.configLoaded
-		r.settings.Logger.Info("Starting scrape manager")
-		if err := r.scrapeManager.Run(r.discoveryManager.SyncCh()); err != nil {
-			r.settings.Logger.Error("Scrape manager failed", zap.Error(err))
-			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
-		}
+		r.settings.Logger.Info("Starting gatherer loop")
+		loop.Run(nil)
 	}()
 	return nil
 }
@@ -213,12 +160,6 @@ func gcInterval(cfg *PromConfig) time.Duration {
 func (r *pReceiver) Shutdown(context.Context) error {
 	if r.cancelFunc != nil {
 		r.cancelFunc()
-	}
-	if r.scrapeManager != nil {
-		r.scrapeManager.Stop()
-	}
-	if r.targetAllocatorManager != nil {
-		r.targetAllocatorManager.Shutdown()
 	}
 	if r.unregisterMetrics != nil {
 		r.unregisterMetrics()

@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	conventions "go.opentelemetry.io/collector/semconv/v1.27.0"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/common/testutil"
 )
 
 type jobInstanceDefinition struct {
@@ -355,7 +353,7 @@ func TestCreateNodeAndResourcePromToOTLP(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			testutil.SetFeatureGateForTest(t, removeOldSemconvFeatureGate, tt.removeOldSemconvFeatureGate)
+			SetFeatureGateForTest(t, removeOldSemconvFeatureGate, tt.removeOldSemconvFeatureGate)
 			got := CreateResource(tt.job, tt.instance, tt.sdLabels)
 			require.Equal(t, tt.want.Attributes().AsRaw(), got.Attributes().AsRaw())
 		})

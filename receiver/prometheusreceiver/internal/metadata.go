@@ -1,11 +1,11 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package internal // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
+package internal // import "github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 
 import (
+	"github.com/pkcll/prometheus/scrape"
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/scrape"
 )
 
 type dataPoint struct {

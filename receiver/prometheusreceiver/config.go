@@ -1,22 +1,23 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+package prometheusreceiver // import "github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"go.opentelemetry.io/collector/confmap"
 	"gopkg.in/yaml.v2"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
+	"github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
 )
 
 // Config defines configuration for Prometheus receiver.
@@ -36,26 +37,15 @@ type Config struct {
 	ReportExtraScrapeMetrics bool `mapstructure:"report_extra_scrape_metrics"`
 
 	TargetAllocator *targetallocator.Config `mapstructure:"target_allocator"`
+
+	Registerer       prometheus.Registerer `mapstructure:"-"`
+	Gatherer         prometheus.Gatherer   `mapstructure:"-"`
+	GathererInterval time.Duration         `mapstructure:"-"`
 }
 
 // Validate checks the receiver configuration is valid.
 func (cfg *Config) Validate() error {
-	if !containsScrapeConfig(cfg) && cfg.TargetAllocator == nil {
-		return errors.New("no Prometheus scrape_configs or target_allocator set")
-	}
 	return nil
-}
-
-func containsScrapeConfig(cfg *Config) bool {
-	if cfg.PrometheusConfig == nil {
-		return false
-	}
-	scrapeConfigs, err := (*promconfig.Config)(cfg.PrometheusConfig).GetScrapeConfigs()
-	if err != nil {
-		return false
-	}
-
-	return len(scrapeConfigs) > 0
 }
 
 // PromConfig is a redeclaration of promconfig.Config because we need custom unmarshaling

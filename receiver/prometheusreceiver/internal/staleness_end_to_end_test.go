@@ -4,12 +4,12 @@
 package internal_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -18,6 +18,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/prometheus/model/value"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/assert"
@@ -34,13 +37,23 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+
+	"github.com/pkcll/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 )
 
 // Test that staleness markers are emitted for timeseries that intermittently disappear.
 // This test runs the entire collector and end-to-end scrapes then checks with the
 // Prometheus remotewrite exporter that staleness markers are emitted per timeseries.
 // See https://github.com/open-telemetry/opentelemetry-collector/issues/3413
+
+// Make GathererFunc that implements Gatherer
+
+type fakeGathererFunc func() ([]*dto.MetricFamily, error)
+
+func (f fakeGathererFunc) Gather() ([]*dto.MetricFamily, error) {
+	return f()
+}
+
 func TestStalenessMarkersEndToEnd(t *testing.T) {
 	if testing.Short() {
 		t.Skip("This test can take a long time")
@@ -50,7 +63,7 @@ func TestStalenessMarkersEndToEnd(t *testing.T) {
 
 	// 1. Setup the server that sends series that intermittently appear and disappear.
 	n := &atomic.Uint64{}
-	scrapeServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+	metricsHandler := func(w io.Writer) {
 		// Increment the scrape count atomically per scrape.
 		i := n.Add(1)
 
@@ -63,21 +76,34 @@ func TestStalenessMarkersEndToEnd(t *testing.T) {
 		// Alternate metrics per scrape so that every one of
 		// them will be reported as stale.
 		if i%2 == 0 {
-			fmt.Fprintf(rw, `
+			fmt.Fprintf(w, `
 # HELP jvm_memory_bytes_used Used bytes of a given JVM memory area.
 # TYPE jvm_memory_bytes_used gauge
-jvm_memory_bytes_used{area="heap"} %.1f`, float64(i))
+jvm_memory_bytes_used{area="heap"} %.1f
+`, float64(i))
 		} else {
-			fmt.Fprintf(rw, `
+			fmt.Fprintf(w, `
 # HELP jvm_memory_pool_bytes_used Used bytes of a given JVM memory pool.
 # TYPE jvm_memory_pool_bytes_used gauge
-jvm_memory_pool_bytes_used{pool="CodeHeap 'non-nmethods'"} %.1f`, float64(i))
+jvm_memory_pool_bytes_used{pool="CodeHeap"} %.1f
+`, float64(i))
 		}
-	}))
-	defer scrapeServer.Close()
+	}
 
-	serverURL, err := url.Parse(scrapeServer.URL)
-	require.NoError(t, err)
+	fakeGatherer := fakeGathererFunc(func() ([]*dto.MetricFamily, error) {
+		var b bytes.Buffer
+		metricsHandler(&b)
+		var parser expfmt.TextParser
+		mfMap, err := parser.TextToMetricFamilies(&b)
+		require.NoError(t, err)
+		var mf []*dto.MetricFamily
+		for _, v := range mfMap {
+			mf = append(mf, v)
+		}
+		return mf, nil
+	})
+
+	prometheus.DefaultGatherer = fakeGatherer
 
 	// 2. Set up the Prometheus RemoteWrite endpoint.
 	prweUploads := make(chan *prompb.WriteRequest)
@@ -109,8 +135,6 @@ receivers:
       scrape_configs:
         - job_name: 'test'
           scrape_interval: 100ms
-          static_configs:
-            - targets: [%q]
 
 processors:
   batch:
@@ -125,7 +149,7 @@ service:
     metrics:
       receivers: [prometheus]
       processors: [batch]
-      exporters: [prometheusremotewrite]`, serverURL.Host, prweServer.URL)
+      exporters: [prometheusremotewrite]`, prweServer.URL)
 
 	confFile, err := os.CreateTemp(os.TempDir(), "conf-")
 	require.NoError(t, err)
